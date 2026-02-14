@@ -1,0 +1,49 @@
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title System Context Diagram (C1) - Целевая архитектура Hotelio
+
+Person(user, "Пользователь", "Клиент системы бронирования отелей")
+
+System_Boundary(hotelio, "Hotelio Platform") {
+    System(apiGateway, "API Gateway", "Единая точка входа, маршрутизация запросов")
+
+    System(userService, "User Service", "Управление пользователями и авторизация")
+    System(hotelService, "Hotel Service", "Каталог и управление отелями")
+    System(promoService, "Promo Service", "Управление промокодами и скидками")
+    System(reviewService, "Review Service", "Система отзывов и рейтингов")
+    System(bookingService, "Booking Service", "Оркестрация процесса бронирования")
+
+    System(monolith, "Hotelio Monolith", "Остаточный функционал монолита")
+}
+
+System_Ext(messageQueue, "Message Broker", "Асинхронная коммуникация между сервисами")
+
+
+' User interactions
+Rel(user, apiGateway, "Использует", "HTTPS/REST")
+
+' API Gateway routing
+Rel(apiGateway, userService, "Маршрутизирует запросы")
+Rel(apiGateway, hotelService, "Маршрутизирует запросы")
+Rel(apiGateway, promoService, "Маршрутизирует запросы")
+Rel(apiGateway, reviewService, "Маршрутизирует запросы")
+Rel(apiGateway, bookingService, "Маршрутизирует запросы")
+Rel(apiGateway, monolith, "Маршрутизирует запросы")
+
+
+' Service to Service communication
+Rel(bookingService, userService, "Валидирует пользователя", "REST/gRPC")
+Rel(bookingService, hotelService, "Проверяет доступность отеля", "REST/gRPC")
+Rel(bookingService, promoService, "Применяет промокод", "REST/gRPC")
+Rel(bookingService, reviewService, "Проверяет рейтинг", "REST/gRPC")
+Rel(promoService, userService, "Проверяет VIP статус", "REST/gRPC")
+
+' Message Queue
+Rel(bookingService, messageQueue, "Публикует события")
+Rel(reviewService, messageQueue, "Публикует события")
+Rel(userService, messageQueue, "Публикует события")
+
+@enduml
