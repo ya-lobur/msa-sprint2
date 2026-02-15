@@ -17,6 +17,7 @@ This service follows a clean architecture with the following layers:
 - PostgreSQL with SQLAlchemy 2.0 async
 - Clean Architecture / Hexagonal Architecture
 - HTTP clients for external services (User, Hotel, Review, Promo)
+- Event-driven architecture with Kafka (publishes BookingCreated events)
 - Structured logging with structlog
 - Database migrations with Alembic
 - Docker and Docker Compose support
@@ -26,6 +27,7 @@ This service follows a clean architecture with the following layers:
 - Python 3.12+
 - uv package manager
 - PostgreSQL 15+
+- Kafka 7.2.1+ and Zookeeper (for event streaming)
 - Docker and Docker Compose (for containerized deployment)
 
 ## Setup
@@ -55,6 +57,8 @@ USER_SERVICE_URL=http://localhost:8080
 HOTEL_SERVICE_URL=http://localhost:8080
 REVIEW_SERVICE_URL=http://localhost:8080
 PROMO_SERVICE_URL=http://localhost:8080
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+KAFKA_TOPIC=booking-events
 LOG_LEVEL=INFO
 ```
 
@@ -80,6 +84,12 @@ docker-compose up --build
 ```
 
 The service will be available on `localhost:50051`.
+
+The Docker Compose stack includes:
+- PostgreSQL database (port 5433)
+- Zookeeper (port 2181)
+- Kafka (port 9092)
+- Booking service (port 50051)
 
 ## gRPC API
 
@@ -161,6 +171,33 @@ The service makes REST calls to:
 - **Review Service**: `/api/reviews/hotel/{id}/trusted`
 - **Promo Service**: `POST /api/promos/validate?code={code}&userId={userId}`
 
+## Event Publishing
+
+The service publishes events to Kafka when bookings are created:
+
+### BookingCreated Event
+
+Published to the configured Kafka topic after a successful booking creation.
+
+**Event Type:** `BookingCreated`
+
+**Payload:**
+
+```json
+{
+  "event_type": "BookingCreated",
+  "data": {
+    "id": "13",
+    "user_id": "test-user-2",
+    "hotel_id": "test-hotel-1",
+    "price": 90.0,
+    "promo_code": "TESTCODE1",
+    "discount_percent": 10.0,
+    "created_at": "2026-02-15T14:37:34.859067+00:00"
+  }
+}
+```
+
 ## Testing with grpcurl
 
 ```bash
@@ -205,6 +242,8 @@ booking-service/
 ├── domain/
 │   ├── entities/
 │   │   └── booking.py
+│   ├── events/
+│   │   └── booking_created.py
 │   ├── services/
 │   │   └── pricing_service.py
 │   └── ports/
@@ -223,6 +262,8 @@ booking-service/
 │   │   └── booking_sa.py
 │   ├── repositories/
 │   │   └── booking_repo_sa.py
+│   ├── messaging/
+│   │   └── kafka_producer.py
 │   └── clients/
 │       └── http/
 │           ├── base.py

@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     review_service_url: str = Field(default="http://localhost:8080", description="Review service URL")
     promo_service_url: str = Field(default="http://localhost:8080", description="Promo service URL")
 
+    # Kafka
+    kafka_bootstrap_servers: str = Field(default="localhost:9092", description="Kafka bootstrap servers")
+    kafka_topic: str = Field(default="booking-events", description="Kafka topic name")
+
     # Logging
     log_level: str = Field(default="INFO", description="Logging level")
 

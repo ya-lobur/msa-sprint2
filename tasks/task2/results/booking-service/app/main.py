@@ -12,6 +12,7 @@ from app.common.logging import setup_logging
 from app.domain.services import PricingService
 from app.infrastructure.clients.http import HotelClientHTTP, PromoClientHTTP, UserClientHTTP
 from app.infrastructure.db import create_engine, create_session_factory
+from app.infrastructure.messaging.kafka_producer import KafkaProducer
 from app.infrastructure.repositories import BookingRepositorySA
 from app.settings import get_settings
 from app.transport.grpc.handlers import BookingServiceHandler
@@ -55,6 +56,10 @@ async def serve():
     engine = create_engine(settings.database_url)
     session_factory = create_session_factory(engine)
 
+    # Create Kafka producer
+    kafka_producer = KafkaProducer(settings.kafka_bootstrap_servers, settings.kafka_topic)
+    await kafka_producer.start()
+
     # Create HTTP clients
     user_client = UserClientHTTP(settings.user_service_url)
     hotel_client = HotelClientHTTP(settings.hotel_service_url, settings.review_service_url)
@@ -75,7 +80,7 @@ async def serve():
     )
 
     # Create and register handler
-    handler = BookingServiceHandler(session_factory, use_case_factory)
+    handler = BookingServiceHandler(session_factory, use_case_factory, kafka_producer)
     booking_pb2_grpc.add_BookingServiceServicer_to_server(handler, server)
 
     # Enable reflection
@@ -110,6 +115,7 @@ async def serve():
     # Graceful shutdown
     logger.info("shutting_down_server")
     await server.stop(grace=5)
+    await kafka_producer.stop()
     await user_client.close()
     await hotel_client.close()
     await promo_client.close()

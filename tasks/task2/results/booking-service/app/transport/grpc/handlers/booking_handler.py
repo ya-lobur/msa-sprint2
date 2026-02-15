@@ -4,6 +4,8 @@ from typing import Callable
 import structlog
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
+from app.domain.events.booking_created import BookingCreated
+from app.infrastructure.messaging.kafka_producer import KafkaProducer
 from app.manager.usecases import BookingUseCases
 from app.infrastructure.repositories import BookingRepositorySA
 from app.transport.grpc.generated import booking_pb2, booking_pb2_grpc
@@ -18,9 +20,11 @@ class BookingServiceHandler(booking_pb2_grpc.BookingServiceServicer):
         self,
         session_factory: async_sessionmaker[AsyncSession],
         use_case_factory: Callable[[BookingRepositorySA], BookingUseCases],
+        kafka_producer: KafkaProducer,
     ):
         self.session_factory = session_factory
         self.use_case_factory = use_case_factory
+        self.kafka_producer = kafka_producer
 
     async def CreateBooking(self, request: booking_pb2.BookingRequest, context) -> booking_pb2.BookingResponse:
         """Handle CreateBooking gRPC request."""
@@ -40,6 +44,18 @@ class BookingServiceHandler(booking_pb2_grpc.BookingServiceServicer):
 
                 # Commit transaction
                 await session.commit()
+
+                # todo: outbox better, but out of scope now
+                event = BookingCreated(
+                    id=booking.id,
+                    user_id=booking.user_id,
+                    hotel_id=booking.hotel_id,
+                    price=booking.price,
+                    promo_code=booking.promo_code,
+                    discount_percent=booking.discount_percent,
+                    created_at=booking.created_at,
+                )
+                await self.kafka_producer.publish(event, "BookingCreated")
 
                 # Convert to protobuf
                 return booking_pb2.BookingResponse(

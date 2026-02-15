@@ -17,4 +17,5 @@ dependencies = [
     "structlog>=24.1",
     "tenacity>=8.2",
     "greenlet>=3.3.1",
+    "aiokafka>=0.13.0",
 ]
