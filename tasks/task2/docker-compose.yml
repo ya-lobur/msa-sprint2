@@ -48,8 +48,11 @@ services:
       REVIEW_SERVICE_URL: "http://monolith:8080"
       PROMO_SERVICE_URL: "http://monolith:8080"
       LOG_LEVEL: "INFO"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      KAFKA_TOPIC: "booking-events"
     depends_on:
       - booking-db
+      - kafka
     networks:
       - hotelio-net
 
@@ -75,8 +78,24 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
     networks:
       - hotelio-net
+
+  kafbat-ui:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    ports:
+      - "8085:8080"
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "true"
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      - kafka
+    networks:
+      - hotelio-net
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.2.1
     ports:
