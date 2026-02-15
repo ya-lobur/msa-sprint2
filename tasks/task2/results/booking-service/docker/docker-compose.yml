@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  postgres:
+  booking-db:
     image: postgres:15
     environment:
       POSTGRES_DB: booking
@@ -28,8 +28,7 @@ services:
       PROMO_SERVICE_URL: "http://host.docker.internal:8080"
       LOG_LEVEL: "INFO"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - booking-db
 
 volumes:
   booking-db-data:

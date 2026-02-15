@@ -21,6 +21,11 @@ if config.config_file_name is not None:
 from app.infrastructure.models.booking_sa import Base
 target_metadata = Base.metadata
 
+# Override sqlalchemy.url from settings if not running offline
+from app.settings import get_settings
+settings = get_settings()
+config.set_main_option("sqlalchemy.url", settings.database_url)
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
