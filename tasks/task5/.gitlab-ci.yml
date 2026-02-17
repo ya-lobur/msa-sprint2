@@ -1,0 +1,68 @@
+stages:
+  - build
+  - test
+  - deploy
+  - tag
+
+variables:
+  IMAGE_TAG: latest
+  IMAGE_NAME: booking-service
+
+build:
+  stage: build
+  script:
+    - cd booking-service
+    - docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+    - docker images | grep ${IMAGE_NAME}
+
+test:
+  stage: test
+  script:
+    - docker run -d --name test-container -p 8080:8080 ${IMAGE_NAME}:${IMAGE_TAG}
+    - sleep 5
+    - curl -f http://localhost:8080/ping || exit 1
+    - curl -f http://localhost:8080/health || exit 1
+    - curl -f http://localhost:8080/ready || exit 1
+    - docker rm -f test-container
+
+deploy:
+  stage: deploy
+  script:
+    # Load image to Minikube
+    - minikube ssh "docker rmi -f ${IMAGE_NAME}:${IMAGE_TAG}" || true
+    - minikube image load ${IMAGE_NAME}:${IMAGE_TAG}
+
+    # Apply shared service
+    - kubectl apply -f results/booking-service.yaml
+
+    # Deploy v1 and v2 versions
+    - helm upgrade --install booking-service-v1 ./helm/booking-service --values ./results/values-v1.yaml
+    - helm upgrade --install booking-service-v2 ./helm/booking-service --values ./results/values-v2.yaml
+
+    # Apply Istio configurations
+    - kubectl apply -f results/destination-rule.yaml
+    - kubectl apply -f results/virtual-service.yaml
+    - kubectl apply -f results/envoy-filter.yaml
+
+    # Restart deployments to pick up new image
+    - kubectl rollout restart deployment/booking-service-v1
+    - kubectl rollout restart deployment/booking-service-v2
+
+    # Wait for rollout
+    - kubectl rollout status deployment/booking-service-v1
+    - kubectl rollout status deployment/booking-service-v2
+
+    # Show status
+    - kubectl get pods -l app=booking-service
+    - kubectl get svc booking-service
+    - kubectl get virtualservices
+    - kubectl get destinationrules
+
+tag:
+  stage: tag
+  script:
+    - TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+    - git tag "deploy-${TIMESTAMP}"
+    - echo "Created tag deploy-${TIMESTAMP}"
+  only:
+    - main
