@@ -7,6 +7,7 @@
 - Установлен Istio с профилем demo: `istioctl install --set profile=demo -y`
 - Включена автоматическая инъекция Envoy sidecar в namespace `default`
 - Все поды booking-service получили Istio sidecar контейнеры (istio-proxy)
+- Включить injection `kubectl label namespace default istio-injection=enabled --overwrite`
 
 ### 2. Создание двух версий сервиса
 

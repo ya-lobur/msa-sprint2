@@ -2,14 +2,14 @@
 
 ## check-istio
 ```text
-❯ sh check-istio.sh       
+❯ sh check-istio.sh
 === Checking Istio Installation ===
 
 1. Checking Istio system pods...
 NAME                                   READY   STATUS    RESTARTS   AGE
-istio-egressgateway-f7fc5b56c-bh8bw    1/1     Running   0          35m
-istio-ingressgateway-8d7447659-7pgz7   1/1     Running   0          35m
-istiod-7c4fbc86db-ws4lw                1/1     Running   0          35m
+istio-egressgateway-f7fc5b56c-d9ndp    1/1     Running   0          21m
+istio-ingressgateway-8d7447659-xdfms   1/1     Running   0          21m
+istiod-7c4fbc86db-ndnjk                1/1     Running   0          22m
 
 2. Checking Istio version...
 client version: 1.29.0
@@ -19,13 +19,14 @@ data plane version: 1.29.0 (5 proxies)
 3. Checking namespace injection...
 enabled
 
-4. Checking booking-service pods (should have 2 containers - app + istio-proxy)...
-booking-service-v1-56fd5df77-6g26l      booking-service
-booking-service-v1-56fd5df77-fgprz      booking-service
-booking-service-v2-95c58cd5b-mzcz2      booking-service
+4. Checking booking-service pods (should have 2/2 READY - app + istio-proxy)...
+NAME                                  READY   STATUS    RESTARTS   AGE
+booking-service-v1-7b7c8fbb49-mjmlq   2/2     Running   0          7m33s
+booking-service-v1-7b7c8fbb49-qjn7l   2/2     Running   0          7m23s
+booking-service-v2-5d9f4778c-cpngk    2/2     Running   0          7m29s
 
 5. Checking if Envoy sidecars are injected...
-
+✓ istio-proxy sidecar is injected (runs as init container in Istio 1.29)
 
 === Istio Check Complete ===
 ```

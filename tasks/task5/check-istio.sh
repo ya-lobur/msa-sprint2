@@ -16,13 +16,16 @@ kubectl get namespace default -o jsonpath='{.metadata.labels.istio-injection}'
 echo ""
 echo ""
 
-echo "4. Checking booking-service pods (should have 2 containers - app + istio-proxy)..."
-kubectl get pods -l app=booking-service -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[*].name}{"\n"}{end}'
+echo "4. Checking booking-service pods (should have 2/2 READY - app + istio-proxy)..."
+kubectl get pods -l app=booking-service
 echo ""
 
 echo "5. Checking if Envoy sidecars are injected..."
-kubectl get pods -l app=booking-service -o jsonpath='{.items[0].spec.containers[?(@.name=="istio-proxy")].name}'
-echo ""
+if kubectl get pods -l app=booking-service -o jsonpath='{.items[0].spec.initContainers[?(@.name=="istio-proxy")].name}' | grep -q "istio-proxy"; then
+  echo "✓ istio-proxy sidecar is injected (runs as init container in Istio 1.29)"
+else
+  echo "✗ istio-proxy sidecar not found"
+fi
 echo ""
 
 echo "=== Istio Check Complete ==="
