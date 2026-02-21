@@ -4,11 +4,11 @@ echo "=== Testing Fallback Route ==="
 echo ""
 
 echo "Before killing v1 pod, testing normal operation..."
-SERVICE_URL="http://$(kubectl get svc booking-service -o jsonpath='{.spec.clusterIP}')"
+SERVICE_URL="http://booking-service/ping"
 
 echo "Sending 5 test requests..."
 for i in $(seq 1 5); do
-  RESPONSE=$(kubectl exec -it deploy/booking-service-v1 -c booking-service -- curl -s $SERVICE_URL)
+  RESPONSE=$(kubectl exec deploy/booking-service-v1 -c istio-proxy -- curl -s $SERVICE_URL)
   echo "Response $i: $RESPONSE"
 done
 
@@ -22,7 +22,7 @@ sleep 10
 echo ""
 echo "Testing requests after v1 is down (should route to v2)..."
 for i in $(seq 1 5); do
-  RESPONSE=$(kubectl exec -it deploy/booking-service-v2 -c booking-service -- curl -s $SERVICE_URL)
+  RESPONSE=$(kubectl exec deploy/booking-service-v2 -c istio-proxy -- curl -s $SERVICE_URL)
   echo "Response $i: $RESPONSE"
   
   if echo "$RESPONSE" | grep -q "v2"; then

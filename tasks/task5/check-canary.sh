@@ -3,7 +3,7 @@
 echo "=== Testing Canary Deployment (90% v1, 10% v2) ==="
 echo ""
 
-SERVICE_URL="http://$(kubectl get svc booking-service -o jsonpath='{.spec.clusterIP}')"
+SERVICE_URL="http://booking-service/ping"
 echo "Service URL: $SERVICE_URL"
 echo ""
 
@@ -14,11 +14,11 @@ TOTAL_REQUESTS=100
 echo "Sending $TOTAL_REQUESTS requests..."
 
 for i in $(seq 1 $TOTAL_REQUESTS); do
-  RESPONSE=$(kubectl exec -it deploy/booking-service-v1 -c booking-service -- curl -s $SERVICE_URL)
-  
-  if echo "$RESPONSE" | grep -q "v1"; then
+  RESPONSE=$(kubectl exec deploy/booking-service-v1 -c istio-proxy -- curl -s $SERVICE_URL)
+
+  if echo "$RESPONSE" | grep -q "pong from v1"; then
     V1_COUNT=$((V1_COUNT + 1))
-  elif echo "$RESPONSE" | grep -q "v2"; then
+  elif echo "$RESPONSE" | grep -q "pong from v2"; then
     V2_COUNT=$((V2_COUNT + 1))
   fi
   
