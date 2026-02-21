@@ -17,7 +17,47 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
-          imagePullPolicy: Never
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
 
           ports:
             - containerPort: {{ .Values.service.targetPort }}
+
+          {{- if .Values.env }}
+          env:
+          {{- range .Values.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+          {{- end }}
+          {{- end }}
+
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.livenessProbe.path }}
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          {{- end }}
+
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessProbe.path }}
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          {{- end }}
+
+          {{- if .Values.resources }}
+          resources:
+            {{- if .Values.resources.requests }}
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+            {{- end }}
+            {{- if .Values.resources.limits }}
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+            {{- end }}
+          {{- end }}

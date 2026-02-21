@@ -1,0 +1,102 @@
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Container Diagram (C2) - Детализация микросервисной архитектуры Hotelio
+
+Person(user, "Пользователь", "Клиент системы бронирования")
+
+System_Boundary(gateway, "API Gateway Layer") {
+    Container(apiGateway, "API Gateway", "Spring Cloud Gateway / Kong", "Маршрутизация, аутентификация, rate limiting")
+}
+
+System_Boundary(services, "Microservices Layer") {
+
+    Container_Boundary(userBoundary, "User Service") {
+        Container(userApi, "User API", "Spring Boot", "REST API для управления пользователями")
+        ContainerDb(userDb, "User Database", "PostgreSQL", "Пользователи, статусы, blacklist")
+    }
+
+    Container_Boundary(hotelBoundary, "Hotel Service") {
+        Container(hotelApi, "Hotel API", "Spring Boot", "REST API каталога отелей")
+        ContainerDb(hotelDb, "Hotel Database", "PostgreSQL", "Отели, города, цены, доступность")
+    }
+
+    Container_Boundary(promoBoundary, "Promo Service") {
+        Container(promoApi, "Promo API", "Spring Boot", "REST API промокодов и скидок")
+        ContainerDb(promoDb, "Promo Database", "PostgreSQL", "Промокоды, правила, ограничения")
+    }
+
+    Container_Boundary(reviewBoundary, "Review Service") {
+        Container(reviewApi, "Review API", "Spring Boot", "REST API отзывов и рейтингов")
+        ContainerDb(reviewDb, "Review Database", "PostgreSQL", "Отзывы, рейтинги отелей")
+    }
+
+    Container_Boundary(bookingBoundary, "Booking Service") {
+        Container(bookingApi, "Booking API", "Spring Boot", "Оркестрация бронирований")
+        ContainerDb(bookingDb, "Booking Database", "PostgreSQL", "Бронирования, транзакции")
+    }
+}
+
+System_Boundary(legacy, "Legacy Layer") {
+    Container(monolith, "Hotelio Monolith", "Spring Boot", "Остаточный функционал")
+    ContainerDb(monolithDb, "Monolith DB", "PostgreSQL", "Остаточные данные")
+}
+
+System_Boundary(infrastructure, "Infrastructure Layer") {
+    Container(messageBroker, "Message Broker", "RabbitMQ / Kafka", "Асинхронная коммуникация, события")
+    Container(serviceDiscovery, "Service Discovery", "Eureka / Consul", "Обнаружение сервисов")
+    Container(configServer, "Config Server", "Spring Cloud Config", "Централизованная конфигурация")
+}
+
+' User to Gateway
+Rel(user, apiGateway, "Использует", "HTTPS/REST")
+
+' Gateway to Services
+Rel(apiGateway, userApi, "Маршрутизирует /api/users/**", "HTTPS")
+Rel(apiGateway, hotelApi, "Маршрутизирует /api/hotels/**", "HTTPS")
+Rel(apiGateway, promoApi, "Маршрутизирует /api/promos/**", "HTTPS")
+Rel(apiGateway, reviewApi, "Маршрутизирует /api/reviews/**", "HTTPS")
+Rel(apiGateway, bookingApi, "Маршрутизирует /api/bookings/**", "HTTPS")
+Rel(apiGateway, monolith, "Маршрутизирует legacy endpoints", "HTTPS")
+
+' Services to DBs
+Rel(userApi, userDb, "Читает/пишет", "JDBC")
+Rel(hotelApi, hotelDb, "Читает/пишет", "JDBC")
+Rel(promoApi, promoDb, "Читает/пишет", "JDBC")
+Rel(reviewApi, reviewDb, "Читает/пишет", "JDBC")
+Rel(bookingApi, bookingDb, "Читает/пишет", "JDBC")
+Rel(monolith, monolithDb, "Читает/пишет", "JDBC")
+
+' Booking Service orchestration
+Rel(bookingApi, userApi, "Валидирует пользователя", "REST/gRPC")
+Rel(bookingApi, hotelApi, "Проверяет доступность", "REST/gRPC")
+Rel(bookingApi, promoApi, "Применяет промокод", "REST/gRPC")
+Rel(bookingApi, reviewApi, "Проверяет рейтинг", "REST/gRPC")
+
+' Cross-service communication
+Rel(promoApi, userApi, "Проверяет VIP статус", "REST/gRPC")
+
+' Message Broker integration
+Rel(bookingApi, messageBroker, "Публикует BookingCreated", "AMQP")
+Rel(reviewApi, messageBroker, "Публикует ReviewCreated", "AMQP")
+Rel(userApi, messageBroker, "Публикует UserStatusChanged", "AMQP")
+Rel(messageBroker, reviewApi, "Подписан на BookingCreated", "AMQP")
+
+' Service Discovery
+Rel(userApi, serviceDiscovery, "Регистрирует сервис")
+Rel(hotelApi, serviceDiscovery, "Регистрирует сервис")
+Rel(promoApi, serviceDiscovery, "Регистрирует сервис")
+Rel(reviewApi, serviceDiscovery, "Регистрирует сервис")
+Rel(bookingApi, serviceDiscovery, "Регистрирует сервис")
+Rel(bookingApi, serviceDiscovery, "Обнаруживает сервисы")
+
+' Config Server
+Rel(userApi, configServer, "Получает конфигурацию")
+Rel(hotelApi, configServer, "Получает конфигурацию")
+Rel(promoApi, configServer, "Получает конфигурацию")
+Rel(reviewApi, configServer, "Получает конфигурацию")
+Rel(bookingApi, configServer, "Получает конфигурацию")
+
+@enduml

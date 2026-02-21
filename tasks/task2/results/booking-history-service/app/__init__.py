@@ -1,0 +1,1 @@
+"""Booking History Service application."""
